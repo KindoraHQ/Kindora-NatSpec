@@ -1,0 +1,63 @@
+name: CI — tests, coverage, static analysis
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    env:
+      CI: true
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Cache node modules
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Solidity linter (solhint)
+        run: npm run lint:solidity
+
+      - name: Run unit tests (Hardhat)
+        run: npm test
+
+      - name: Run coverage (solidity-coverage)
+        # solidity-coverage can be slow; run it separately
+        run: npm run coverage
+
+      - name: Upload coverage report artifact
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report
+          path: coverage
+
+      - name: Run Slither static analysis
+        uses: trailofbits/slither-action@v1
+        with:
+          # produce a JSON report that we can upload
+          args: --json slither-report.json
+
+      - name: Upload slither report artifact
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: slither-report
+          path: slither-report.json
