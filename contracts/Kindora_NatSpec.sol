@@ -36,9 +36,8 @@ interface IUniswapV2Router02 {
 
 /// @title Kindora (KNR) ERC20 token with fixed fees for charity, liquidity, and burn
 /// @author KindoraHQ
-/// @notice ERC20 token that collects fees on transfers and swaps tokens accumulated for liquidity and charity
-/// @dev This contract uses defensive checks around swaps and approvals. Owner privileges include configuring router,
-/// charity wallet, limits, and rescue functions. Fees are fixed and cannot be changed after deployment.
+/// @notice ERC20 token that collects fees on buys/sells and swaps tokens accumulated for liquidity and charity
+/// @dev Fees are applied only on trades with the DEX pair (buy/sell), not on wallet-to-wallet transfers.
 contract Kindora is ERC20, Ownable {
     /* ========== Addresses ========== */
 
@@ -50,7 +49,7 @@ contract Kindora is ERC20, Ownable {
 
     /* ========== Fee configuration (constants, immutable at runtime) ========== */
 
-    /// @notice Total fee percentage taken on transfers (in percent, base 100)
+    /// @notice Total fee percentage taken on buys/sells (in percent, base 100)
     uint256 public constant TOTAL_FEE = 5;       // 5%
 
     /// @notice Portion of TOTAL_FEE allocated to charity (percent of TOTAL_FEE)
@@ -314,7 +313,7 @@ contract Kindora is ERC20, Ownable {
 
     /* ========== Core transfer logic (fees applied here) ========== */
 
-    /// @dev Internal transfer override that applies fees, accumulates buckets, and triggers swaps.
+    /// @dev Internal transfer override that applies fees on buys/sells, accumulates buckets, and triggers swaps.
     /// @param from Sender address
     /// @param to Recipient address
     /// @param amount Transfer amount (in token wei)
@@ -342,9 +341,15 @@ contract Kindora is ERC20, Ownable {
             }
         }
 
-        // Determine if fees should be taken.
-        // Note: fees are skipped if either party is excluded. This is intentional but should be documented.
-        bool takeFee = !_isExcludedFromFees[from] && !_isExcludedFromFees[to] && !inSwap;
+        // Detect trade type
+        bool isBuy = from == pair;
+        bool isSell = to == pair;
+
+        // Only take fees on buys/sells with the pair, not on wallet-to-wallet transfers
+        bool takeFee = (isBuy || isSell) &&
+            !_isExcludedFromFees[from] &&
+            !_isExcludedFromFees[to] &&
+            !inSwap;
 
         // Attempt swap/liq/charity if conditions are met and not currently in a swap.
         if (
@@ -355,7 +360,6 @@ contract Kindora is ERC20, Ownable {
             uint256 contractTokenBalance = balanceOf(address(this));
 
             if (liquidityTokens >= minTokensForSwap && contractTokenBalance >= liquidityTokens) {
-                // Avoid attempting to split 1 token into halves -> require at least 2
                 if (liquidityTokens >= 2) {
                     _swapAndLiquify(liquidityTokens);
                 }
@@ -458,8 +462,10 @@ contract Kindora is ERC20, Ownable {
     /// @dev Swap tokens allocated for charity into ETH and send to charityWallet
     /// @param tokenAmount Amount of tokens to swap for charity ETH
     function _swapTokensForCharity(uint256 tokenAmount) internal lockTheSwap {
-        require(charityWallet != address(0), "Charity wallet not set");
-        if (tokenAmount == 0) return;
+        // If charity wallet not set or tokenAmount is zero, skip to avoid blocking trading
+        if (charityWallet == address(0) || tokenAmount == 0) {
+            return;
+        }
 
         address[] memory path = new address[](2);
         path[0] = address(this);
