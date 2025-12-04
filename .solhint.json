@@ -1,0 +1,13 @@
+{
+  "extends": "solhint:recommended",
+  "rules": {
+    "compiler-fixed": "error",
+    "func-order": "off",
+    "max-line-length": "off",
+    "not-rely-on-time": "warn",
+    "avoid-throw": "warn",
+    "reason-string": "warn",
+    "visibility": ["warn", { "includeConstructors": true }],
+    "no-unused-vars": "warn"
+  }
+}

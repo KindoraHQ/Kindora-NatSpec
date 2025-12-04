@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Build artifacts
+cache/
+artifacts/
+typechain/
+typechain-types/
+
+# Coverage
+coverage/
+coverage.json
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+.env.local
+
+# Hardhat
+hardhat.config.js.bak
