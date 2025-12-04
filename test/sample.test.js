@@ -2,6 +2,9 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 describe("Sample Tests (CI stable)", function () {
+  // Constants matching the contract
+  const INITIAL_SUPPLY = 10_000_000;
+  
   let deployer, addr1, charity;
   let MockFactory, MockRouter, Kindora;
   let factory, router;
@@ -32,7 +35,7 @@ describe("Sample Tests (CI stable)", function () {
 
   it("should deploy with correct initial supply", async function () {
     const totalSupply = await token.totalSupply();
-    expect(totalSupply).to.equal(toUnits(10_000_000));
+    expect(totalSupply).to.equal(toUnits(INITIAL_SUPPLY));
   });
 
   it("should have correct name and symbol", async function () {
