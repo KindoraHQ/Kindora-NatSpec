@@ -1,85 +1,56 @@
-name: CI — tests, coverage, static analysis
+name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
   pull_request:
-    branches: [ main ]
-
-permissions:
-  contents: read
+    branches: [ main, master ]
 
 jobs:
-  test:
-    name: Run minimal tests
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18
+          cache: 'npm'
 
       - name: Install dependencies
+        # package-lock.json is optional; use npm install to be tolerant in CI
         run: npm install
 
       - name: Compile contracts
         run: npx hardhat compile
 
-      - name: Run only sample unit tests (fast, stable)
+      - name: Run unit tests (minimal subset)
+        # Run only reliable sample tests to keep CI stable while some tests may be flaky
         run: npx hardhat test test/sample.test.js
 
-  solhint:
-    name: Solidity lint (non-blocking)
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Run solidity linter (non-blocking)
+        # Run linter but do not fail the job while we stabilize rules
+        run: npm run lint:solidity || true
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - name: Upload test artifacts
+        uses: actions/upload-artifact@v4
         with:
-          node-version: 18
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Run solhint
-        run: npm run lint:solidity
+          name: test-results
+          path: coverage || test-results || ./artifacts || .
 
   slither:
-    name: Static analysis (Slither)
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-
-      - name: Run Slither (crytic)
-        uses: crytic/slither-action@v0.4.1
-        with:
-          args: --exclude-dependencies
-
-  upload-artifacts:
-    name: Upload coverage artifacts (optional)
-    runs-on: ubuntu-latest
-    needs: [ test ]
+    needs: build
     if: always()
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Upload artifacts (if any)
-        uses: actions/upload-artifact@v4
-        continue-on-error: true
+      - name: Run slither (static analysis)
+        # Use crytic's slither action; change or disable if not applicable
+        uses: crytic/slither-action@v0.4.1
         with:
-          name: coverage
-          path: coverage/
-          if-no-files-found: ignore
+          # optional: produce json report
+          args: --json slither-report.json

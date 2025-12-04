@@ -1,22 +1,25 @@
 {
-  "name": "kindora",
+  "name": "kindora-natspec",
   "version": "0.1.0",
-  "private": true,
+  "description": "Kindora NatSpec utilities",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
-    "test": "npx hardhat test",
-    "test:ci": "npx hardhat test test/sample.test.js",
-    "coverage": "npx hardhat coverage",
-    "lint:solidity": "solhint 'contracts/**/*.sol' || true",
-    "prepare-ci": "npm ci --ignore-scripts"
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "lint:solidity": "solhint 'contracts/**/*.sol'",
+    "lint": "npm run lint:solidity"
   },
   "devDependencies": {
     "hardhat": "^2.18.0",
-    "@nomiclabs/hardhat-ethers": "2.2.3",
-    "ethers": "^5.7.2",
-    "chai": "^4.3.7",
-    "mocha": "^10.2.0",
-    "solidity-coverage": "^0.8.3",
-    "solhint": "^3.3.7",
-    "@openzeppelin/contracts": "4.9.3"
+    "@nomicfoundation/hardhat-toolbox": "^2.0.0",
+    "solhint": "^3.5.0",
+    "eslint": "^8.40.0"
+  },
+  "dependencies": {
+    "ethers": "^6.9.0",
+    "chai": "^4.3.7"
   }
 }

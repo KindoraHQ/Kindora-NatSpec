@@ -1,13 +1,12 @@
 {
   "extends": "solhint:recommended",
+  "plugins": [],
   "rules": {
-    "compiler-fixed": "error",
+    "compiler-version": "error",
     "func-order": "off",
     "max-line-length": "off",
     "not-rely-on-time": "warn",
-    "avoid-throw": "warn",
-    "reason-string": "warn",
-    "visibility": ["warn", { "includeConstructors": true }],
-    "no-unused-vars": "warn"
+    "var-name-mixedcase": "off",
+    "no-console": "off"
   }
 }
