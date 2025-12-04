@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
+pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// @notice Minimal Factory interface used to create / query pair
-interface IUniswapV2Factory {
+interface IUniswapV2FactoryKindora {
     function createPair(address tokenA, address tokenB) external returns (address pair);
     function getPair(address tokenA, address tokenB) external view returns (address pair);
 }
 
 /// @notice Minimal Router interface used for swaps and adding liquidity
-interface IUniswapV2Router02 {
+interface IUniswapV2Router02Kindora {
     function factory() external view returns (address);
     function WETH() external view returns (address);
 
@@ -34,11 +33,38 @@ interface IUniswapV2Router02 {
     ) external payable returns (uint256 amountToken, uint256 amountETH, uint256 liquidity);
 }
 
+/// @dev Minimal Ownable implementation with a unique name to avoid symbol collisions across the repo.
+abstract contract KindoraOwnable {
+    address private _owner;
+
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
+    constructor() {
+        _owner = msg.sender;
+        emit OwnershipTransferred(address(0), _owner);
+    }
+
+    function owner() public view returns (address) {
+        return _owner;
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == _owner, "Ownable: caller is not the owner");
+        _;
+    }
+
+    function transferOwnership(address newOwner) public onlyOwner {
+        require(newOwner != address(0), "Ownable: new owner is zero address");
+        emit OwnershipTransferred(_owner, newOwner);
+        _owner = newOwner;
+    }
+}
+
 /// @title Kindora (KNR) ERC20 token with fixed fees for charity, liquidity, and burn
 /// @author KindoraHQ
 /// @notice ERC20 token that collects fees on buys/sells and swaps tokens accumulated for liquidity and charity
 /// @dev Fees are applied only on trades with the DEX pair (buy/sell), not on wallet-to-wallet transfers.
-contract Kindora is ERC20, Ownable {
+contract KindoraToken is ERC20, KindoraOwnable {
     /* ========== Addresses ========== */
 
     /// @notice Charity wallet address receiving ETH proceeds from charity token swaps
@@ -64,7 +90,7 @@ contract Kindora is ERC20, Ownable {
     /* ========== Router & Pair ========== */
 
     /// @notice Router used for swaps and liquidity operations
-    IUniswapV2Router02 public router;
+    IUniswapV2Router02Kindora public router;
 
     /// @notice Pair address for token <> WETH liquidity pool
     address public pair;
@@ -138,10 +164,10 @@ contract Kindora is ERC20, Ownable {
         uint256 totalSupply = 10_000_000 * 10 ** decimals();
         _mint(msg.sender, totalSupply);
 
-        router = IUniswapV2Router02(_router);
+        router = IUniswapV2Router02Kindora(_router);
 
         // Attempt to fetch existing pair; create if not present
-        IUniswapV2Factory factory = IUniswapV2Factory(router.factory());
+        IUniswapV2FactoryKindora factory = IUniswapV2FactoryKindora(router.factory());
         address _pair = factory.getPair(address(this), router.WETH());
         if (_pair == address(0)) {
             _pair = factory.createPair(address(this), router.WETH());
@@ -266,9 +292,9 @@ contract Kindora is ERC20, Ownable {
     function setRouter(address _router) external onlyOwner {
         require(_router != address(0), "Zero address");
         emit UpdateRouter(_router, address(router));
-        router = IUniswapV2Router02(_router);
+        router = IUniswapV2Router02Kindora(_router);
 
-        IUniswapV2Factory factory = IUniswapV2Factory(router.factory());
+        IUniswapV2FactoryKindora factory = IUniswapV2FactoryKindora(router.factory());
         address _pair = factory.getPair(address(this), router.WETH());
         if (_pair == address(0)) {
             _pair = factory.createPair(address(this), router.WETH());
@@ -313,17 +339,12 @@ contract Kindora is ERC20, Ownable {
 
     /* ========== Core transfer logic (fees applied here) ========== */
 
-    /// @dev Internal transfer override that applies fees on buys/sells, accumulates buckets, and triggers swaps.
-    /// @param from Sender address
-    /// @param to Recipient address
-    /// @param amount Transfer amount (in token wei)
-    function _transfer(
+    /// @dev Internal helper that contains the original transfer logic previously in _transfer.
+    function _handleTransfer(
         address from,
         address to,
         uint256 amount
-    ) internal override {
-        require(from != address(0), "ERC20: transfer from zero");
-        require(to != address(0), "ERC20: transfer to zero");
+    ) internal {
         require(amount > 0, "Amount must be > 0");
 
         // Anti-whale limits (skipped during inSwap to avoid reentrancy/race)
@@ -370,14 +391,14 @@ contract Kindora is ERC20, Ownable {
             }
         }
 
-        // If fees should not be taken, do a normal transfer
+        // If fees should not be taken, do a normal transfer via base ERC20
         if (!takeFee) {
-            super._transfer(from, to, amount);
+            ERC20._transfer(from, to, amount);
             return;
         }
 
         // Collect the full amount from sender into the contract to manage distribution
-        super._transfer(from, address(this), amount);
+        ERC20._transfer(from, address(this), amount);
 
         // Compute fee breakdown based on TOTAL_FEE and sub-allocations
         uint256 feeAmount = (amount * TOTAL_FEE) / 100;
@@ -397,7 +418,7 @@ contract Kindora is ERC20, Ownable {
         uint256 transferAmount = amount - feeAmount;
 
         // Send net amount to recipient
-        super._transfer(address(this), to, transferAmount);
+        ERC20._transfer(address(this), to, transferAmount);
 
         // Execute burn (reduces totalSupply)
         if (burnAmount > 0) {
@@ -411,6 +432,24 @@ contract Kindora is ERC20, Ownable {
         if (liquidityAmount > 0) {
             liquidityTokens += liquidityAmount;
         }
+    }
+
+    /// @notice Override transfer to apply fees and hooks
+    function transfer(address to, uint256 amount) public virtual override returns (bool) {
+        _handleTransfer(msg.sender, to, amount);
+        return true;
+    }
+
+    /// @notice Override transferFrom to apply fees and handle allowance decrease
+    function transferFrom(address from, address to, uint256 amount) public virtual override returns (bool) {
+        uint256 currentAllowance = allowance(from, msg.sender);
+        require(currentAllowance >= amount, "ERC20: transfer amount exceeds allowance");
+        unchecked {
+            _approve(from, msg.sender, currentAllowance - amount);
+        }
+
+        _handleTransfer(from, to, amount);
+        return true;
     }
 
     /* ========== Internal swap & liquidity functions ========== */
