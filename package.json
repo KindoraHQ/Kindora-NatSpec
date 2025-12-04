@@ -1,17 +1,25 @@
 {
-  "name": "kindora-contract",
-  "version": "0.0.0",
+  "name": "kindora-natspec",
+  "version": "0.1.0",
+  "description": "Kindora NatSpec utilities",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
-    "test": "npx hardhat test",
-    "lint:solidity": "npx solhint 'contracts/**/*.sol' '**/test/**/*.sol' || true",
-    "compile": "npx hardhat compile"
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "lint:solidity": "solhint 'contracts/**/*.sol'",
+    "lint": "npm run lint:solidity"
   },
   "devDependencies": {
-    "@nomiclabs/hardhat-ethers": "2.2.3",
-    "hardhat": "^2.17.0",
-    "solhint": "^3.3.6",
-    "crytic-slither": "^0.1.0"
+    "hardhat": "^2.18.0",
+    "@nomicfoundation/hardhat-toolbox": "^2.0.0",
+    "solhint": "^3.5.0",
+    "eslint": "^8.40.0"
   },
   "dependencies": {
+    "ethers": "^6.9.0",
+    "chai": "^4.3.7"
   }
 }

@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Lock file (not committing in this PR per issue discussion)
+package-lock.json
+
+# Build artifacts
+cache/
+artifacts/
+typechain/
+typechain-types/
+
+# Coverage
+coverage/
+coverage.json
+coverage-report/
+
+# Hardhat network
+.hardhat/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Slither reports
+slither-report.json
+
+# Environment variables
+.env
+.env.local

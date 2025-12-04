@@ -20,14 +20,14 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        # Using npm install while package-lock.json is not committed.
+        # package-lock.json is optional; use npm install to be tolerant in CI
         run: npm install
 
       - name: Compile contracts
         run: npx hardhat compile
 
       - name: Run unit tests (minimal subset)
-        # Run only reliable sample tests to keep CI stable while Uniswap tests are flaky
+        # Run only reliable sample tests to keep CI stable while some tests may be flaky
         run: npx hardhat test test/sample.test.js
 
       - name: Run solidity linter (non-blocking)

@@ -1,8 +1,11 @@
-// Minimal Hardhat config snippet with multiple compiler versions.
-// Merge with your existing config; ensure you keep networks/plugins after merging.
-require("@nomiclabs/hardhat-ethers");
-require("@nomiclabs/hardhat-waffle");
+require("@nomicfoundation/hardhat-toolbox");
 
+/**
+ * Hardhat configuration
+ *
+ * - Include a small set of compiler versions to maximize compatibility with contracts
+ * - Enable optimizer for sensible defaults
+ */
 module.exports = {
   solidity: {
     compilers: [
@@ -16,18 +19,23 @@ module.exports = {
         }
       },
       {
-        version: "0.6.6",
+        version: "0.8.19",
         settings: {
-          optimizer: { enabled: true, runs: 200 }
-        }
-      },
-      {
-        version: "0.5.16",
-        settings: {
-          optimizer: { enabled: true, runs: 200 }
+          optimizer: {
+            enabled: true,
+            runs: 200
+          }
         }
       }
     ]
   },
-  // keep your existing networks, paths, and plugin configs here
+  paths: {
+    sources: "./contracts",
+    tests: "./test",
+    cache: "./cache",
+    artifacts: "./artifacts"
+  },
+  mocha: {
+    timeout: 200000
+  }
 };
