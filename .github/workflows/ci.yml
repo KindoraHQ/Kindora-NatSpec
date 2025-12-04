@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ main ]
 
+permissions:
+  contents: read
+
 jobs:
   test:
     name: Run minimal tests
@@ -68,12 +71,15 @@ jobs:
     name: Upload coverage artifacts (optional)
     runs-on: ubuntu-latest
     needs: [ test ]
+    if: always()
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Upload artifacts (if any)
         uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: coverage
-          path: coverage || coverage-report || ''
+          path: coverage/
+          if-no-files-found: ignore

@@ -2,6 +2,8 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 describe("Sample tests (minimal, stable)", function () {
+  const EXPECTED_TOTAL_SUPPLY = 10_000_000;
+  
   let deployer, addr1;
   let MockFactory, MockRouter, KindoraToken;
   let factory, router, token;
@@ -33,7 +35,7 @@ describe("Sample tests (minimal, stable)", function () {
 
   it("deploys with correct initial supply", async function () {
     const totalSupply = await token.totalSupply();
-    const expectedSupply = toUnits(10_000_000);
+    const expectedSupply = toUnits(EXPECTED_TOTAL_SUPPLY);
     expect(totalSupply).to.equal(expectedSupply);
   });
 
