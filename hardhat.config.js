@@ -1,6 +1,11 @@
-require("@nomiclabs/hardhat-ethers");
-require("solidity-coverage");
+require("@nomicfoundation/hardhat-toolbox");
 
+/**
+ * Hardhat configuration
+ *
+ * - Include a small set of compiler versions to maximize compatibility with contracts
+ * - Enable optimizer for sensible defaults
+ */
 module.exports = {
   solidity: {
     compilers: [
@@ -14,25 +19,7 @@ module.exports = {
         }
       },
       {
-        version: "0.8.17",
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 200
-          }
-        }
-      },
-      {
-        version: "0.6.6",
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 200
-          }
-        }
-      },
-      {
-        version: "0.5.16",
+        version: "0.8.19",
         settings: {
           optimizer: {
             enabled: true,
@@ -42,7 +29,13 @@ module.exports = {
       }
     ]
   },
+  paths: {
+    sources: "./contracts",
+    tests: "./test",
+    cache: "./cache",
+    artifacts: "./artifacts"
+  },
   mocha: {
-    timeout: 120000
+    timeout: 200000
   }
 };

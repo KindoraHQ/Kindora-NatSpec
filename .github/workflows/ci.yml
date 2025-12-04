@@ -1,75 +1,56 @@
-name: CI — tests, coverage, static analysis
+name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
   pull_request:
-    branches: [ main ]
-
-env:
-  NODE_VERSION: '18'
+    branches: [ main, master ]
 
 jobs:
-  test:
-    name: Run minimal tests
+  build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: 18
+          cache: 'npm'
 
       - name: Install dependencies
+        # package-lock.json is optional; use npm install to be tolerant in CI
         run: npm install
 
       - name: Compile contracts
         run: npx hardhat compile
 
-      - name: Run only sample unit tests (fast, stable)
+      - name: Run unit tests (minimal subset)
+        # Run only reliable sample tests to keep CI stable while some tests may be flaky
         run: npx hardhat test test/sample.test.js
 
-  solhint:
-    name: Solidity lint (non-blocking)
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Run solidity linter (non-blocking)
+        # Run linter but do not fail the job while we stabilize rules
+        run: npm run lint:solidity || true
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - name: Upload test artifacts
+        uses: actions/upload-artifact@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Run solhint
-        run: npm run lint:solidity
+          name: test-results
+          path: coverage || test-results || ./artifacts || .
 
   slither:
-    name: Static analysis (Slither)
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
+    needs: build
+    if: always()
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Run Slither (crytic)
+      - name: Run slither (static analysis)
+        # Use crytic's slither action; change or disable if not applicable
         uses: crytic/slither-action@v0.4.1
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          slither-args: --exclude-dependencies
+          # optional: produce json report
+          args: --json slither-report.json
