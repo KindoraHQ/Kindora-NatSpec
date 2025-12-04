@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CI: true
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -19,9 +20,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "npm"
+          cache: npm
 
-      - name: Cache node modules
+      - name: Cache npm
         uses: actions/cache@v4
         with:
           path: ~/.npm
@@ -44,20 +45,21 @@ jobs:
 
       - name: Upload coverage report artifact
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: coverage
 
       - name: Run Slither static analysis
-        uses: trailofbits/slither-action@v1
+        uses: crytic/slither-action@v0.4.1
         with:
-          # produce a JSON report that we can upload
-          args: --json slither-report.json
+          target: .
+          slither-args: --json slither-report.json
+          fail-on: medium
 
       - name: Upload slither report artifact
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: slither-report
           path: slither-report.json
