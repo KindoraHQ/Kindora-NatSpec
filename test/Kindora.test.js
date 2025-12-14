@@ -73,16 +73,20 @@ describe("Kindora (KNR) - core flows", function () {
     await token.connect(addr2).transfer(pair, toUnits(1000));
 
     const charityBefore = await ethers.provider.getBalance(charity.address);
-    const contractBefore = await ethers.provider.getBalance(token.address);
+    const contractTokenBefore = await token.balanceOf(token.address);
 
-    // another SELL triggers swaps
+    // another SELL triggers swaps (in your contract, swap attempts happen before fee collection,
+    // so whether this SELL triggers depends on bucket values already being >= minTokensForSwap)
     await token.connect(addr1).transfer(pair, toUnits(500));
 
     const charityAfter = await ethers.provider.getBalance(charity.address);
-    const contractAfter = await ethers.provider.getBalance(token.address);
+    const contractTokenAfter = await token.balanceOf(token.address);
 
+    // charity swap sends ETH directly to charityWallet (not to the token contract)
     expect(charityAfter).to.be.gt(charityBefore);
-    expect(contractAfter).to.be.gt(contractBefore);
+
+    // swap should consume some of the contract's accumulated tokens (charity and/or liquidity)
+    expect(contractTokenAfter).to.be.lt(contractTokenBefore);
   });
 
   it("burn reduces totalSupply only on SELL", async function () {
