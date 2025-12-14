@@ -13,13 +13,13 @@
     "lint": "npm run lint:solidity"
   },
   "devDependencies": {
-    "hardhat": "^2.18.0",
     "@nomicfoundation/hardhat-toolbox": "^2.0.0",
-    "solhint": "^3.5.0",
-    "eslint": "^8.40.0"
+    "eslint": "^8.40.0",
+    "ethers": "^5.8.0",
+    "hardhat": "^2.18.0",
+    "solhint": "^3.5.0"
   },
   "dependencies": {
-    "ethers": "^6.9.0",
     "chai": "^4.3.7"
   }
 }

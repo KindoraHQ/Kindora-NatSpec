@@ -2,7 +2,7 @@
 node_modules/
 
 # Lock file (not committing in this PR per issue discussion)
-package-lock.json
+
 
 # Build artifacts
 cache/
