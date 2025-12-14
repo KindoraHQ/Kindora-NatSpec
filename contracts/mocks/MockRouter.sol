@@ -21,9 +21,7 @@ contract MockRouter {
         weth = _weth;
     }
 
-    function factory() external view returns (address) {
-        return factory;
-    }
+    
 
     function WETH() external view returns (address) {
         return weth;
