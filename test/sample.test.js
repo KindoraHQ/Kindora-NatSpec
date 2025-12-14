@@ -16,7 +16,7 @@ describe("Sample Tests (CI stable)", function () {
 
     MockFactory = await ethers.getContractFactory("MockFactory");
     MockRouter = await ethers.getContractFactory("MockRouter");
-    Kindora = await ethers.getContractFactory("Kindora");
+    Kindora = await ethers.getContractFactory("KindoraToken");
 
     // Deploy factory and router mocks
     factory = await MockFactory.deploy();
