@@ -162,7 +162,7 @@ REPORT_GAS=true npx hardhat test
 ## Test Coverage Summary
 
 The comprehensive test suite includes:
-- **200+ test cases** covering all contract functionality
+- **94 test cases** covering all contract functionality
 - **Full path coverage** for buy/sell flows
 - **Edge case handling** including zero amounts, overflows, and reentrancy
 - **Access control verification** for all owner-only functions
