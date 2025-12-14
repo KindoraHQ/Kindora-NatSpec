@@ -20,18 +20,15 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        # package-lock.json is optional; use npm install to be tolerant in CI
         run: npm install
 
       - name: Compile contracts
         run: npx hardhat compile
 
       - name: Run unit tests (minimal subset)
-        # Run only reliable sample tests to keep CI stable while some tests may be flaky
         run: npx hardhat test test/sample.test.js
 
       - name: Run solidity linter (non-blocking)
-        # Run linter but do not fail the job while we stabilize rules
         run: npm run lint:solidity || true
 
       - name: Upload test artifacts
@@ -44,14 +41,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     if: always()
-    continue-on-error: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Run slither (static analysis)
-        # Use crytic's slither action; change or disable if not applicable
         uses: crytic/slither-action@v0.4.1
         with:
-          # optional: produce json report
           args: --json slither-report.json
