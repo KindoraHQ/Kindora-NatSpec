@@ -14,7 +14,7 @@ describe("Kindora (KNR) - core flows", function () {
     MockFactory = await ethers.getContractFactory("MockFactory");
     MockRouter = await ethers.getContractFactory("MockRouter");
     DummyERC20 = await ethers.getContractFactory("DummyERC20");
-    Kindora = await ethers.getContractFactory("Kindora");
+    Kindora = await ethers.getContractFactory("KindoraToken");
 
     // Deploy factory and router mocks
     factory = await MockFactory.deploy();
