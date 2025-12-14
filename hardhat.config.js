@@ -1,11 +1,5 @@
 require("@nomicfoundation/hardhat-toolbox");
 
-/**
- * Hardhat configuration
- *
- * - Include a small set of compiler versions to maximize compatibility with contracts
- * - Enable optimizer for sensible defaults
- */
 module.exports = {
   solidity: {
     compilers: [
@@ -27,7 +21,23 @@ module.exports = {
           }
         }
       }
-    ]
+    ],
+    overrides: {
+      "contracts/Kindora_NatSpec.sol": {
+        version: "0.8.20",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200
+          }
+        }
+      }
+    }
+  },
+  networks: {
+    hardhat: {
+      allowUnlimitedContractSize: true
+    }
   },
   paths: {
     sources: "./contracts",

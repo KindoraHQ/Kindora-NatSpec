@@ -10,23 +10,23 @@ interface IFactory {
 /// @dev For simplicity, swapExactTokensForETHSupportingFeeOnTransferTokens will send up to 1 ETH (or available balance)
 ///      to the `to` address when called, so tests should fund the router with ETH before invoking swaps.
 contract MockRouter {
-    address public factory;
-    address public weth;
+    address private _factory;
+    address private _weth;
 
     event Swapped(address indexed caller, uint256 amountIn, address to);
     event LiquidityAdded(address indexed token, uint256 tokenAmount, uint256 ethAmount, address to);
 
-    constructor(address _factory, address _weth) {
-        factory = _factory;
-        weth = _weth;
+    constructor(address factory_, address weth_) {
+        _factory = factory_;
+        _weth = weth_;
     }
 
     function factory() external view returns (address) {
-        return factory;
+        return _factory;
     }
 
     function WETH() external view returns (address) {
-        return weth;
+        return _weth;
     }
 
     // This mock simply sends up to 1 ETH from router balance to `to`.

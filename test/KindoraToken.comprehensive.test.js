@@ -5,9 +5,31 @@ describe("KindoraToken - Comprehensive Test Coverage", function () {
   let deployer, buyer, seller, addr1, addr2, charity, other;
   let MockFactory, MockRouter, DummyERC20, Kindora;
   let factory, router;
-  let token;
+  let token, pairAddr;
   const toUnits = (n) => ethers.utils.parseUnits(n.toString(), 18);
   const INITIAL_SUPPLY = 10_000_000;
+
+  // Helper to simulate a buy (transfer from pair to user)
+  async function simulateBuy(recipient, amount) {
+    // Need to approve pair to transfer from deployer first
+    const allowance = await token.allowance(deployer.address, pairAddr);
+    if (allowance.lt(amount)) {
+      await token.approve(pairAddr, amount.mul(10));
+    }
+    // Simulate buy by having tokens go from pair address (as 'from')
+    // Since we can't easily make pair the msg.sender, we'll transfer to pair first
+    // then have someone transfer from pair
+    await token.transfer(pairAddr, amount.mul(2));
+    // Now transfer from pair (simulates router transferring from pair to buyer)
+    // The contract sees 'from == pair' as a buy
+    return await token.transferFrom(pairAddr, recipient, amount);
+  }
+
+  // Helper to simulate a sell (transfer from user to pair)
+  async function simulateSell(seller, amount) {
+    // Transfer to pair address (this is detected as a sell)
+    return await token.connect(seller).transfer(pairAddr, amount);
+  }
 
   beforeEach(async function () {
     [deployer, buyer, seller, addr1, addr2, charity, other] = await ethers.getSigners();
@@ -26,6 +48,9 @@ describe("KindoraToken - Comprehensive Test Coverage", function () {
     // Deploy token with router mock address
     token = await Kindora.deploy(router.address);
     await token.deployed();
+    
+    // Get pair address
+    pairAddr = await token.pair();
 
     // Fund router with ETH for swaps
     await deployer.sendTransaction({ to: router.address, value: ethers.utils.parseEther("10") });
@@ -101,8 +126,11 @@ describe("KindoraToken - Comprehensive Test Coverage", function () {
     });
 
     it("should correctly split fees: 3% charity, 1% liquidity, 1% burn", async function () {
-      // Include deployer in fees for this test
-      await token.excludeFromFees(deployer.address, false);
+      // To test fees, we need a buy or sell. Let's do a sell (transfer TO pair)
+      const pairAddr = await token.pair();
+      
+      // Give buyer some tokens first (no fees since deployer excluded)
+      await token.transfer(buyer.address, toUnits(20000));
       
       const amount = toUnits(10000);
       const totalFee = amount.mul(5).div(100); // 5% = 500 tokens
@@ -112,7 +140,8 @@ describe("KindoraToken - Comprehensive Test Coverage", function () {
       
       const supplyBefore = await token.totalSupply();
       
-      await token.transfer(buyer.address, amount);
+      // Sell: buyer transfers to pair (triggers fees)
+      await token.connect(buyer).transfer(pairAddr, amount);
       
       // Check burn (totalSupply decreased)
       const supplyAfter = await token.totalSupply();
@@ -140,12 +169,11 @@ describe("KindoraToken - Comprehensive Test Coverage", function () {
     beforeEach(async function () {
       await token.setCharityWallet(charity.address);
       await token.setMinTokensForSwap(toUnits(1)); // Low threshold for testing
+      // Give seller some tokens (no fees since deployer excluded)
+      await token.transfer(seller.address, toUnits(50000));
     });
 
     it("should apply fees on sell to pair", async function () {
-      // Include deployer in fees
-      await token.excludeFromFees(deployer.address, false);
-      
       const pairAddr = await token.pair();
       const amount = toUnits(1000);
       const totalFee = amount.mul(5).div(100);
@@ -153,7 +181,7 @@ describe("KindoraToken - Comprehensive Test Coverage", function () {
       const pairBalanceBefore = await token.balanceOf(pairAddr);
       
       // Transfer to pair (simulate sell)
-      await token.transfer(pairAddr, amount);
+      await token.connect(seller).transfer(pairAddr, amount);
       
       const pairBalanceAfter = await token.balanceOf(pairAddr);
       const received = pairBalanceAfter.sub(pairBalanceBefore);
@@ -163,19 +191,18 @@ describe("KindoraToken - Comprehensive Test Coverage", function () {
     });
 
     it("should trigger swapAndLiquify on sell when threshold met", async function () {
-      await token.excludeFromFees(deployer.address, false);
+      const pairAddr = await token.pair();
       
-      // Accumulate liquidity tokens via fees
-      await token.transfer(buyer.address, toUnits(5000));
+      // Accumulate liquidity tokens via fees (sell to pair)
+      await token.connect(seller).transfer(pairAddr, toUnits(5000));
       
       const liquidityTokensBefore = await token.liquidityTokens();
       expect(liquidityTokensBefore).to.be.gt(0);
       
       const contractEthBefore = await ethers.provider.getBalance(token.address);
       
-      // Trigger sell to pair
-      const pairAddr = await token.pair();
-      await token.transfer(pairAddr, toUnits(100));
+      // Trigger another sell to pair
+      await token.connect(seller).transfer(pairAddr, toUnits(100));
       
       // Contract should have received ETH from swap
       const contractEthAfter = await ethers.provider.getBalance(token.address);
@@ -183,19 +210,18 @@ describe("KindoraToken - Comprehensive Test Coverage", function () {
     });
 
     it("should trigger charity swap on sell when threshold met", async function () {
-      await token.excludeFromFees(deployer.address, false);
+      const pairAddr = await token.pair();
       
-      // Accumulate charity tokens via fees
-      await token.transfer(buyer.address, toUnits(5000));
+      // Accumulate charity tokens via fees (sell to pair)
+      await token.connect(seller).transfer(pairAddr, toUnits(5000));
       
       const charityTokensBefore = await token.charityTokens();
       expect(charityTokensBefore).to.be.gt(0);
       
       const charityEthBefore = await ethers.provider.getBalance(charity.address);
       
-      // Trigger sell to pair
-      const pairAddr = await token.pair();
-      await token.transfer(pairAddr, toUnits(100));
+      // Trigger another sell to pair
+      await token.connect(seller).transfer(pairAddr, toUnits(100));
       
       // Charity should have received ETH
       const charityEthAfter = await ethers.provider.getBalance(charity.address);
@@ -203,17 +229,16 @@ describe("KindoraToken - Comprehensive Test Coverage", function () {
     });
 
     it("should decrement charity and liquidity counters after swaps", async function () {
-      await token.excludeFromFees(deployer.address, false);
+      const pairAddr = await token.pair();
       
       // Accumulate fees
-      await token.transfer(buyer.address, toUnits(10000));
+      await token.connect(seller).transfer(pairAddr, toUnits(10000));
       
       const charityBefore = await token.charityTokens();
       const liquidityBefore = await token.liquidityTokens();
       
       // Trigger swaps via sell
-      const pairAddr = await token.pair();
-      await token.transfer(pairAddr, toUnits(100));
+      await token.connect(seller).transfer(pairAddr, toUnits(100));
       
       const charityAfter = await token.charityTokens();
       const liquidityAfter = await token.liquidityTokens();
